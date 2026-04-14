@@ -64,6 +64,22 @@
             --border: rgba(0,0,0,0.06);
             --bottom-nav-pb: env(safe-area-inset-bottom, 16px);
         }
+/* Убираем синий эффект при клике и блокируем выделение текста */
+* {
+    -webkit-tap-highlight-color: transparent !important;
+    -webkit-touch-callout: none; /* Запрет вызова меню в iOS */
+    -webkit-user-select: none;   /* Safari */
+    -moz-user-select: none;      /* Firefox */
+    -ms-user-select: none;       /* IE/Edge */
+    user-select: none;           /* Стандарт */
+    outline: none !important;
+}
+
+/* Оставляем возможность выделять текст в полях ввода (если они появятся в будущем) */
+input, textarea {
+    -webkit-user-select: auto;
+    user-select: auto;
+}
 
         .theme-dark {
             /* Темная тема */
@@ -487,30 +503,46 @@
             },
 
             init() {
-                this.applyTheme();
-                this.changeLanguage(this.state.lang);
-                this.setupNav();
-                this.updateDaysUI();
-                this.loadLocalData();
-                this.initSpeech();
+            init() {
+    this.applyTheme();
+    this.changeLanguage(this.state.lang);
+    this.setupNav();
+    this.updateDaysUI();
+    this.loadLocalData();
+    this.initSpeech();
 
-                // Умное обновление данных
-                db.ref('/').on('value', snap => {
-                    const serverData = snap.val();
-                    if(!serverData) return;
-                    this.state.serverDataStr = JSON.stringify({h: serverData.hierarchy, s: serverData.schedules});
-                    if(!this.state.localDataStr) {
-                        this.saveServerDataToLocal(serverData.hierarchy, serverData.schedules);
-                    } else if (this.state.serverDataStr !== this.state.localDataStr) {
-                        this.state.hasUpdate = true; this.renderUpdateBlock();
-                    } else {
-                        this.state.hasUpdate = false; this.renderUpdateBlock();
-                    }
-                });
+    // Умное обновление данных
+    db.ref('/').on('value', snap => {
+        const serverData = snap.val();
+        if(!serverData) return;
+        this.state.serverDataStr = JSON.stringify({h: serverData.hierarchy, s: serverData.schedules});
+        
+        // ВАЖНО: Если данных в локальном стейте еще нет, применяем их сразу
+        if (!this.state.data.hierarchy) {
+            this.state.data.hierarchy = serverData.hierarchy;
+            this.state.data.schedules = serverData.schedules;
+            
+            // Открываем окно настройки группы ТОЛЬКО когда данные уже загружены
+            if (!this.state.path) {
+                this.openGroupSettings();
+            }
+        }
 
-                if (!this.state.path) setTimeout(() => this.openGroupSettings(), 500);
-                else this.updateHeaderSubtitle();
-            },
+        if(!this.state.localDataStr) {
+            this.saveServerDataToLocal(serverData.hierarchy, serverData.schedules);
+        } else if (this.state.serverDataStr !== this.state.localDataStr) {
+            this.state.hasUpdate = true; this.renderUpdateBlock();
+        } else {
+            this.state.hasUpdate = false; this.renderUpdateBlock();
+        }
+    });
+
+    // Убираем setTimeout, теперь логика открытия обрабатывается внутри коллбека Firebase
+    if (this.state.path) {
+        this.updateHeaderSubtitle();
+    }
+},
+
 
             // === ТЕМЫ И ЯЗЫК ===
             applyTheme() {
