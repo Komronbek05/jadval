@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Расписание ДТТ</title>
+    <meta name="theme-color" content="#F2F2F7" id="meta-theme-color">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="icon.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icon.png">
+<link rel="shortcut icon" href="favicon.ico">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons (Современные) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    boxShadow: {
+                        'glow': '0 0 20px var(--accent-soft)',
+                        'sheet': '0 -10px 40px rgba(0, 0, 0, 0.25)',
+                        'badge': '0 2px 6px rgba(0,0,0,0.06)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* === ПЕРЕМЕННЫЕ И ТЕМЫ (One UI / iOS Style) === */
+        :root {
+            /* Светлая тема */
+            --bg-color: #F2F2F7; 
+            --card-bg: rgba(255, 255, 255, 0.85); 
+            --card-border: rgba(255, 255, 255, 0.9);
+            --text-main: #000000; 
+            --text-mut: #8E8E93;
+            
+            --nav-bg: rgba(255, 255, 255, 0.75);
+            --days-container-bg: #E5E5EA; 
+            --days-text: #8E8E93;
+            --day-active-bg: linear-gradient(135deg, #FFFFFF 0%, #F8F8F8 100%);
+            --day-active-text: #000000;
+            --day-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            
+            --sheet-bg: #FFFFFF;
+            --accent: #3390EC; 
+            --accent-soft: rgba(51, 144, 236, 0.15);
+            --border: rgba(0,0,0,0.06);
+            --bottom-nav-pb: env(safe-area-inset-bottom, 16px);
+        }
+
+        .theme-dark {
+            /* Темная тема */
+            --bg-color: #000000; 
+            --card-bg: rgba(28, 28, 30, 0.65); 
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #FFFFFF; 
+            --text-mut: #8E8E93;
+            
+            --nav-bg: rgba(28, 28, 30, 0.75);
+            --days-container-bg: #2C2C2E; 
+            --days-text: #FFFFFF;
+            --day-active-bg: linear-gradient(135deg, #7A7A7D 0%, #535356 100%);
+            --day-active-text: #FFFFFF;
+            --day-shadow: 0 4px 10px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.2);
+            
+            --sheet-bg: #1C1C1E;
+            --border: rgba(255,255,255,0.1);
+        }
+
+        /* Цветовые Акценты */
+        .color-blue { --accent: #3390EC; --accent-soft: rgba(51, 144, 236, 0.15); }
+        .color-red { --accent: #FF3B30; --accent-soft: rgba(255, 59, 48, 0.15); }
+        .color-orange { --accent: #FF9500; --accent-soft: rgba(255, 149, 0, 0.15); }
+        .color-green { --accent: #34C759; --accent-soft: rgba(52, 199, 89, 0.15); }
+        .color-purple { --accent: #AF52DE; --accent-soft: rgba(175, 82, 222, 0.15); }
+
+        body {
+            background-color: var(--bg-color); color: var(--text-main); font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none;
+            transition: background-color 0.4s ease, color 0.4s ease; 
+        }
+
+        ::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .tap-active:active { transform: scale(0.96); opacity: 0.8; transition: transform 0.1s ease, opacity 0.1s ease; }
+
+        /* === АППАРАТНО УСКОРЕННЫЙ SPA === */
+        .view-container { 
+            position: absolute; top: 0; left: 0; width: 100%; min-height: 100vh; 
+            visibility: hidden; opacity: 0; transform: translateY(15px) scale(0.98); 
+            padding-top: 65px; padding-bottom: 140px; z-index: 10;
+            transition: opacity 0.3s cubic-bezier(0.32, 0.72, 0, 1), transform 0.3s cubic-bezier(0.32, 0.72, 0, 1), visibility 0.3s;
+            will-change: opacity, transform, visibility;
+        }
+        .view-active { 
+            visibility: visible; opacity: 1; transform: translateY(0) scale(1); z-index: 20; 
+            transition: opacity 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* === ЖИДКОЕ СТЕКЛО (Liquid Glass) === */
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(25px) saturate(180%); -webkit-backdrop-filter: blur(25px) saturate(180%);
+            border: 1px solid var(--card-border);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        }
+
+        /* === НАВИГАЦИЯ ДНЕЙ === */
+        .days-wrapper { background-color: var(--bg-color); padding: 10px 0; margin-bottom: 5px; transition: background-color 0.4s ease; }
+        .days-container { background: var(--days-container-bg); border-radius: 40px; padding: 4px; display: flex; justify-content: space-between; align-items: center; }
+        .day-btn { position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: var(--days-text); font-weight: 600; font-size: 15px; border-radius: 50%; z-index: 2; }
+        .day-active-bg { position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 50%; background: var(--day-active-bg); box-shadow: var(--day-shadow); z-index: -1; opacity: 0; transform: scale(0.8); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .day-btn.active .day-active-bg { opacity: 1; transform: scale(1); }
+        .day-btn.active { color: var(--day-active-text); text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+
+        /* === НИЖНЕЕ МЕНЮ === */
+        .bottom-nav-wrapper {
+            position: fixed; bottom: calc(15px + var(--bottom-nav-pb)); left: 50%; transform: translateX(-50%);
+            width: 95%; max-width: 450px;
+            background: var(--nav-bg); backdrop-filter: blur(35px) saturate(200%); -webkit-backdrop-filter: blur(35px) saturate(200%);
+            border: 1px solid var(--card-border); border-radius: 40px; padding: 6px 10px;
+            display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 35px rgba(0,0,0,0.15); z-index: 50;
+        }
+        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 23%; padding: 8px 0; border-radius: 30px; color: var(--text-mut); transition: all 0.3s ease; opacity: 0.8; }
+        .nav-item.active { background-color: var(--accent-soft); color: var(--accent); opacity: 1; }
+        .nav-item i { font-size: 24px; margin-bottom: 2px; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .nav-item.active i { transform: scale(1.15); }
+        .nav-item span { font-size: 11px; font-weight: 600; }
+
+        /* === BOTTOM SHEETS === */
+        .bottom-sheet-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; visibility: hidden; opacity: 0; transition: opacity 0.3s ease, visibility 0.3s; backdrop-filter: blur(5px); }
+        .bottom-sheet { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--sheet-bg); border-radius: 32px 32px 0 0; z-index: 101; transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1); box-shadow: var(--tw-shadow-sheet); padding-bottom: env(safe-area-inset-bottom); max-height: 85vh; display: flex; flex-direction: column; border-top: 1px solid var(--border); }
+        .bottom-sheet.active { transform: translateY(0); }
+        .bottom-sheet-bg.active { visibility: visible; opacity: 1; }
+        .bs-content { overflow-y: auto; padding: 0 20px 20px 20px; flex-grow: 1; }
+
+        /* Custom Switch */
+        .custom-switch { width: 52px; height: 32px; background-color: rgba(142,142,147,0.3); border-radius: 32px; position: relative; transition: background-color 0.3s; }
+        .custom-switch.on { background-color: var(--accent); }
+        .custom-switch-thumb { width: 28px; height: 28px; background-color: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 2px 6px rgba(0,0,0,0.25); }
+        .custom-switch.on .custom-switch-thumb { transform: translateX(20px); }
+
+        .list-row { padding: 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; color: var(--text-main); font-weight: 600; font-size: 16px; }
+        .list-row:last-child { border-bottom: none; }
+        .list-row.selected { color: var(--accent); }
+
+        /* ИИ Ассистент */
+        .ai-fab { position: fixed; bottom: calc(95px + var(--bottom-nav-pb)); right: 15px; width: 58px; height: 58px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; box-shadow: var(--tw-shadow-glow); z-index: 45; color: white; cursor: pointer; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); will-change: transform; }
+        .ai-fab:active { transform: scale(0.85); }
+        .ai-wave { width: 5px; height: 12px; background-color: var(--accent); border-radius: 5px; animation: wave 1s infinite ease-in-out; }
+        .ai-wave:nth-child(2) { animation-delay: 0.2s; }
+        .ai-wave:nth-child(3) { animation-delay: 0.4s; }
+        .ai-wave:nth-child(4) { animation-delay: 0.6s; }
+        @keyframes wave { 0%, 100% { height: 12px; } 50% { height: 36px; } }
+
+        /* Тост Уведомление */
+        #app-toast { position: fixed; top: calc(env(safe-area-inset-top) + 15px); left: 50%; transform: translateX(-50%) translateY(-20px); background: var(--text-main); color: var(--bg-color); padding: 12px 24px; border-radius: 30px; font-weight: 700; font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 1000; opacity: 0; pointer-events: none; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        #app-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    </style>
+</head>
+<body class="antialiased selection:bg-[var(--accent)] selection:text-white">
+
+    <!-- Тост для уведомлений -->
+    <div id="app-toast"></div>
+
+    <!-- Header -->
+    <header class="fixed top-0 left-0 w-full z-40 px-4 flex flex-col justify-end h-[65px]" style="padding-top: env(safe-area-inset-top); background: var(--bg-color); transition: background-color 0.4s ease;">
+        <h1 id="app-header-title" class="text-[28px] font-extrabold tracking-tight text-left leading-tight" data-i18n="nav_schedule">Расписание</h1>
+        <p id="app-header-subtitle" class="text-[12px] font-semibold text-[var(--text-mut)] mt-[-2px] truncate"></p>
+    </header>
+
+    <!-- Main Content -->
+    <main id="app-content" class="relative w-full">
+        
+        <!-- ================= TAB: SCHEDULE ================= -->
+        <div id="view-schedule" class="view-container view-active px-3">
+            <!-- Навигация Дней (С липким фоном) -->
+            <div class="days-wrapper sticky top-[65px] z-30">
+                <div class="days-container shadow-sm">
+                    <button onclick="App.selectDay(0)" class="day-btn tap-active"><div class="day-active-bg"></div><span data-i18n="day_mon">Пн</span></button>
+                    <button onclick="App.selectDay(1)" class="day-btn tap-active"><div class="day-active-bg"></div><span data-i18n="day_tue">Вт</span></button>
+                    <button onclick="App.selectDay(2)" class="day-btn tap-active"><div class="day-active-bg"></div><span data-i18n="day_wed">Ср</span></button>
+                    <button onclick="App.selectDay(3)" class="day-btn tap-active"><div class="day-active-bg"></div><span data-i18n="day_thu">Чт</span></button>
+                    <button onclick="App.selectDay(4)" class="day-btn tap-active"><div class="day-active-bg"></div><span data-i18n="day_fri">Пт</span></button>
+                    <button onclick="App.selectDay(5)" class="day-btn tap-active"><div class="day-active-bg"></div><span data-i18n="day_sat">Сб</span></button>
+                </div>
+            </div>
+            <!-- Список Пар -->
+            <div id="schedule-list" class="flex flex-col gap-3 pb-2"></div>
+        </div>
+
+        <!-- ================= TAB: FREE AUDITORIUMS ================= -->
+        <div id="view-free-aud" class="view-container px-3 pt-[85px]">
+            <div class="mb-5 glass-card rounded-[22px] p-4 flex justify-between items-center tap-active" onclick="App.openListSheet('aud-faculty')">
+                <div>
+                    <span class="text-[10px] text-[var(--text-mut)] font-bold uppercase block mb-0.5" data-i18n="modal_faculty">Факультет</span>
+                    <span id="aud-faculty-label" class="font-bold text-[15px]" data-i18n="all_faculties">Все факультеты</span>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-[var(--border)] flex items-center justify-center text-[var(--text-main)]"><i class="ph-bold ph-caret-down"></i></div>
+            </div>
+
+            <div class="flex gap-3 mb-6">
+                <div class="flex-1 glass-card rounded-[22px] p-4 flex flex-col justify-center items-center">
+                    <span id="stat-total" class="text-3xl font-bold text-[var(--accent)]">0</span>
+                    <span class="text-[10px] text-[var(--text-mut)] font-bold uppercase mt-1" data-i18n="stat_total">Всего</span>
+                </div>
+                <div class="flex-1 glass-card rounded-[22px] p-4 flex flex-col justify-center items-center bg-green-500/10">
+                    <span id="stat-free" class="text-3xl font-bold text-green-500">0</span>
+                    <span class="text-[10px] text-[var(--text-mut)] font-bold uppercase mt-1" data-i18n="stat_free">Свободно</span>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-[17px] font-bold mb-3 flex items-center gap-2"><i class="ph-fill ph-clock text-[var(--accent)]"></i> <span data-i18n="aud_now">Сейчас</span></h3>
+                <div id="aud-list-now" class="grid grid-cols-4 sm:grid-cols-6 gap-2"></div>
+            </div>
+            <div>
+                <h3 class="text-[17px] font-bold mb-3 flex items-center gap-2"><i class="ph-fill ph-arrow-circle-right text-[var(--accent)]"></i> <span data-i18n="aud_next">Следующая</span> <span id="time-next" class="text-xs font-normal text-[var(--text-mut)]"></span></h3>
+                <div id="aud-list-next" class="grid grid-cols-4 sm:grid-cols-6 gap-2"></div>
+            </div>
+        </div>
+
+        <!-- ================= TAB: EXAMS ================= -->
+        <div id="view-exams" class="view-container px-3 pt-[85px]">
+            <!-- Countdown Block -->
+            <div class="glass-card rounded-[24px] p-5 mb-5 relative overflow-hidden bg-[var(--accent-soft)]" style="border-color: var(--accent-soft);">
+                <div class="absolute -right-4 -top-4 text-[var(--accent)] opacity-10"><i class="ph-fill ph-exam text-8xl"></i></div>
+                <div class="flex items-center gap-2 font-bold mb-3 text-[var(--accent)]">
+                    <i class="ph-fill ph-bell-ringing text-xl"></i>
+                    <span id="exam-next-title" data-i18n="exam_loading">Загрузка данных...</span>
+                </div>
+                <div id="exam-countdown" class="flex gap-3 justify-center text-center pt-3 border-t border-[var(--accent-soft)]">
+                    <!-- Timer dynamically inserted here -->
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="flex gap-2 overflow-x-auto no-scrollbar mb-5 pb-1">
+                <button onclick="App.setExamFilter('all', this)" class="exam-filter bg-[var(--accent)] text-white px-4 py-1.5 rounded-full font-bold text-[13px] whitespace-nowrap shadow-glow tap-active transition-all" data-i18n="exam_all">Все</button>
+                <button onclick="App.setExamFilter('upcoming', this)" class="exam-filter glass-card px-4 py-1.5 rounded-full font-bold text-[13px] text-[var(--text-mut)] whitespace-nowrap tap-active transition-all" data-i18n="exam_upcoming">Предстоящие</button>
+                <button onclick="App.setExamFilter('current', this)" class="exam-filter glass-card px-4 py-1.5 rounded-full font-bold text-[13px] text-[var(--text-mut)] whitespace-nowrap tap-active transition-all" data-i18n="exam_current">Текущие</button>
+                <button onclick="App.setExamFilter('passed', this)" class="exam-filter glass-card px-4 py-1.5 rounded-full font-bold text-[13px] text-[var(--text-mut)] whitespace-nowrap tap-active transition-all" data-i18n="exam_passed">Завершённые</button>
+            </div>
+
+            <!-- Exams Grid -->
+            <div id="exams-list" class="flex flex-col gap-3 pb-4"></div>
+        </div>
+
+        <!-- ================= TAB: SETTINGS ================= -->
+        <div id="view-settings" class="view-container px-3 pt-[85px]">
+            
+            <div class="glass-card rounded-[24px] p-4 mb-4 flex items-center justify-between tap-active bg-[var(--accent-soft)]" style="border-color: var(--accent-soft);" onclick="App.openGroupSettings()">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-[var(--accent)] flex items-center justify-center text-white shadow-glow">
+                        <i class="ph-fill ph-users text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-[17px] text-[var(--accent)] leading-tight" data-i18n="set_change_group">Сменить группу</h3>
+                        <p id="settings-current-group" class="text-xs font-semibold text-[var(--text-main)] mt-0.5 opacity-80">Не выбрана</p>
+                    </div>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-[var(--bg-color)] bg-opacity-50 flex items-center justify-center text-[var(--accent)]"><i class="ph-bold ph-caret-right text-lg"></i></div>
+            </div>
+
+            <!-- Блок Обновлений -->
+            <div id="update-block" class="glass-card rounded-[24px] mb-4 overflow-hidden transition-all"></div>
+
+            <div class="glass-card rounded-[24px] overflow-hidden mb-6">
+                <!-- Тема -->
+                <div class="p-4 border-b border-[var(--border)] flex justify-between items-center tap-active" onclick="App.toggleDarkMode()">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-full bg-[var(--text-mut)] bg-opacity-10 flex items-center justify-center text-[var(--text-main)]"><i class="ph-fill ph-moon text-[20px]"></i></div>
+                        <span class="font-semibold text-[16px]" data-i18n="set_dark_mode">Тёмная тема</span>
+                    </div>
+                    <div id="theme-switch" class="custom-switch"><div class="custom-switch-thumb"></div></div>
+                </div>
+
+                <!-- Цвета Акцента -->
+                <div class="p-4 border-b border-[var(--border)]">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-9 h-9 rounded-full bg-pink-500/10 flex items-center justify-center text-pink-500"><i class="ph-fill ph-palette text-[20px]"></i></div>
+                        <span class="font-semibold text-[16px]" data-i18n="set_color">Цвет акцента</span>
+                    </div>
+                    <div class="flex gap-4 overflow-x-auto no-scrollbar pb-1 pt-1 ml-12">
+                        <button onclick="App.setAccent('blue')" class="w-8 h-8 rounded-full bg-[#3390EC] ring-2 ring-offset-2 ring-offset-[var(--card-bg)] ring-transparent focus:ring-[#3390EC] tap-active transition-all"></button>
+                        <button onclick="App.setAccent('red')" class="w-8 h-8 rounded-full bg-[#FF3B30] ring-2 ring-offset-2 ring-offset-[var(--card-bg)] ring-transparent focus:ring-[#FF3B30] tap-active transition-all"></button>
+                        <button onclick="App.setAccent('orange')" class="w-8 h-8 rounded-full bg-[#FF9500] ring-2 ring-offset-2 ring-offset-[var(--card-bg)] ring-transparent focus:ring-[#FF9500] tap-active transition-all"></button>
+                        <button onclick="App.setAccent('green')" class="w-8 h-8 rounded-full bg-[#34C759] ring-2 ring-offset-2 ring-offset-[var(--card-bg)] ring-transparent focus:ring-[#34C759] tap-active transition-all"></button>
+                        <button onclick="App.setAccent('purple')" class="w-8 h-8 rounded-full bg-[#AF52DE] ring-2 ring-offset-2 ring-offset-[var(--card-bg)] ring-transparent focus:ring-[#AF52DE] tap-active transition-all"></button>
+                    </div>
+                </div>
+
+                <!-- Язык -->
+                <div class="p-4 flex justify-between items-center tap-active" onclick="App.openListSheet('lang')">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-full bg-teal-500/10 flex items-center justify-center text-teal-500"><i class="ph-fill ph-translate text-[20px]"></i></div>
+                        <span class="font-semibold text-[16px]" data-i18n="set_lang">Язык</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span id="current-lang-text" class="text-[var(--accent)] font-bold text-[15px]">Русский</span>
+                        <i class="ph-bold ph-caret-right text-[var(--text-mut)] ml-1"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-8 mb-4 opacity-40">
+                <p class="text-[11px] font-bold tracking-widest text-[var(--text-main)]">DTT SCHEDULE V6.0</p>
+                <p class="text-[10px] font-medium mt-1 text-[var(--text-mut)]">Made by Komron Sharipov</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- ИИ Ассистент Button -->
+    <div class="ai-fab tap-active" onclick="App.openVoiceAssistant()">
+        <i class="ph-fill ph-sparkle text-[26px]"></i>
+    </div>
+
+    <!-- === НИЖНЕЕ МЕНЮ === -->
+    <nav class="bottom-nav-wrapper">
+        <button onclick="App.switchTab('schedule')" class="nav-item active tap-active" data-tab="schedule">
+            <i class="ph ph-calendar-dots"></i>
+            <span data-i18n="nav_schedule">Чаты</span>
+        </button>
+        <button onclick="App.switchTab('free-aud')" class="nav-item tap-active" data-tab="free-aud">
+            <i class="ph ph-graduation-cap"></i>
+            <span data-i18n="nav_aud">Контакты</span>
+        </button>
+        <button onclick="App.switchTab('exams')" class="nav-item tap-active" data-tab="exams">
+            <i class="ph ph-exam"></i>
+            <span data-i18n="nav_exams">Экзамены</span>
+        </button>
+        <button onclick="App.switchTab('settings')" class="nav-item tap-active" data-tab="settings">
+            <i class="ph ph-gear"></i>
+            <span data-i18n="nav_more">Настройки</span>
+        </button>
+    </nav>
+
+    <!-- OVERLAYS & SHEETS -->
+    <div id="modal-bg" class="bottom-sheet-bg" onclick="App.closeAllModals()"></div>
+
+    <!-- Настройка Группы -->
+    <div id="groupSettingsSheet" class="bottom-sheet h-[75vh]">
+        <div class="pt-4 pb-2 flex justify-center shrink-0"><div class="w-12 h-1.5 bg-[var(--border)] rounded-full"></div></div>
+        <div class="px-5 pb-4 shrink-0 border-b border-[var(--border)] flex justify-between items-center">
+            <h2 class="text-xl font-bold" data-i18n="modal_select_group">Выбор расписания</h2>
+            <button onclick="App.closeAllModals()" class="text-[var(--accent)] font-bold bg-[var(--accent-soft)] px-3 py-1.5 rounded-full text-sm tap-active" data-i18n="btn_done">Готово</button>
+        </div>
+        
+        <div class="bs-content pt-5">
+            <div class="flex flex-col gap-3.5">
+                <div class="glass-card rounded-[20px] p-4 flex justify-between items-center tap-active" onclick="App.openListSheet('faculty')">
+                    <div>
+                        <span class="text-[10px] text-[var(--text-mut)] font-bold uppercase block mb-1" data-i18n="modal_faculty">Факультет</span>
+                        <span id="lbl-faculty" class="font-bold text-[16px]">Не выбран</span>
+                    </div>
+                    <div class="w-8 h-8 rounded-full bg-[var(--border)] flex items-center justify-center text-[var(--text-main)]"><i class="ph-bold ph-caret-right"></i></div>
+                </div>
+                <div id="btn-course" class="glass-card rounded-[20px] p-4 flex justify-between items-center tap-active opacity-50 pointer-events-none" onclick="App.openListSheet('course')">
+                    <div>
+                        <span class="text-[10px] text-[var(--text-mut)] font-bold uppercase block mb-1" data-i18n="modal_course">Курс</span>
+                        <span id="lbl-course" class="font-bold text-[16px]">Не выбран</span>
+                    </div>
+                    <div class="w-8 h-8 rounded-full bg-[var(--border)] flex items-center justify-center text-[var(--text-main)]"><i class="ph-bold ph-caret-right"></i></div>
+                </div>
+                <div id="btn-group" class="glass-card rounded-[20px] p-4 flex justify-between items-center tap-active opacity-50 pointer-events-none" onclick="App.openListSheet('group')">
+                    <div>
+                        <span class="text-[10px] text-[var(--text-mut)] font-bold uppercase block mb-1" data-i18n="modal_group">Группа</span>
+                        <span id="lbl-group" class="font-bold text-[16px]">Не выбрана</span>
+                    </div>
+                    <div class="w-8 h-8 rounded-full bg-[var(--border)] flex items-center justify-center text-[var(--text-main)]"><i class="ph-bold ph-caret-right"></i></div>
+                </div>
+
+                <button id="btn-save-group" onclick="App.saveGroupSelection()" class="w-full bg-[var(--accent)] text-white p-4 rounded-[20px] font-bold text-lg mt-4 tap-active shadow-glow transition-all opacity-50 pointer-events-none" data-i18n="btn_save">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Универсальный список -->
+    <div id="listSheet" class="bottom-sheet h-[65vh]">
+        <div class="pt-4 pb-2 flex justify-center shrink-0"><div class="w-12 h-1.5 bg-[var(--border)] rounded-full"></div></div>
+        <div class="px-5 pb-3 shrink-0 border-b border-[var(--border)] flex items-center gap-3">
+            <button onclick="App.closeListSheet()" class="w-9 h-9 bg-[var(--border)] rounded-full flex items-center justify-center tap-active text-[var(--text-main)]"><i class="ph-bold ph-arrow-left"></i></button>
+            <h2 id="list-sheet-title" class="text-[20px] font-bold">Выберите</h2>
+        </div>
+        <div class="bs-content pt-2" id="list-sheet-content"></div>
+    </div>
+
+    <!-- ИИ Ассистент Gemini -->
+    <div id="aiModal" class="bottom-sheet px-6 pt-4 pb-10 bg-gradient-to-b from-[var(--sheet-bg)] to-[var(--bg-color)]">
+        <div class="w-12 h-1.5 bg-[var(--border)] rounded-full mx-auto mb-6"></div>
+        <div class="flex flex-col items-center justify-center text-center">
+            <div id="ai-visual" class="w-24 h-24 rounded-full bg-[var(--accent-soft)] flex items-center justify-center mb-5 shadow-glow transition-all border border-[var(--accent-soft)]">
+                <i id="ai-icon" class="ph-fill ph-sparkle text-[45px] text-[var(--accent)]"></i>
+                <div id="ai-waves" class="hidden flex gap-1.5 h-[30px] items-center justify-center">
+                    <div class="ai-wave"></div><div class="ai-wave"></div><div class="ai-wave"></div><div class="ai-wave"></div>
+                </div>
+            </div>
+            <h3 id="ai-status-text" class="text-xl font-bold mb-1.5 text-[var(--text-main)]">Gemini AI</h3>
+            <p id="ai-response-text" class="text-[var(--text-mut)] text-[15px] min-h-[50px] font-medium px-2 leading-snug" data-i18n="ai_desc">Попросите сменить тему, или задайте любой вопрос.</p>
+            <button id="ai-action-btn" onclick="App.toggleVoiceRecording()" class="mt-5 w-[85%] bg-[var(--accent)] text-white py-3.5 rounded-full font-bold text-[16px] shadow-glow tap-active transition-colors" data-i18n="ai_btn">Слушать</button>
+        </div>
+    </div>
+
+    <script>
+        const i18n = {
+            ru: {
+                nav_schedule: 'Расписание', nav_aud: 'Аудитории', nav_exams: 'Экзамены', nav_more: 'Настройки', 
+                day_mon: 'Пн', day_tue: 'Вт', day_wed: 'Ср', day_thu: 'Чт', day_fri: 'Пт', day_sat: 'Сб',
+                aud: 'Ауд.', type_lec: 'Лекция', type_prac: 'Практика', teacher: 'Не указан',
+                no_classes: 'Пар нет. Отдыхайте! 🎉',
+                all_faculties: 'Все факультеты', stat_total: 'Всего', stat_free: 'Свободно', aud_now: 'Сейчас', aud_next: 'Следующая', empty_auds: 'Нет свободных',
+                set_change_group: 'Сменить группу', set_dark_mode: 'Тёмная тема', set_color: 'Цвет акцента', set_lang: 'Язык',
+                modal_select_group: 'Выбор расписания', modal_faculty: 'Факультет', modal_course: 'Курс', modal_group: 'Группа', btn_save: 'Сохранить', btn_done: 'Готово',
+                lang_ru: 'Русский', lang_tj: 'Тоҷикӣ', lang_en: 'English',
+                upd_avail: 'Доступно обновление', upd_btn: 'Обновить расписание', upd_latest: 'У вас последняя версия', upd_success: 'Данные успешно синхронизированы',
+                ai_desc: 'Попросите сменить тему, группу или задайте любой вопрос.', ai_btn: 'Слушать',
+                exam_all: 'Все', exam_upcoming: 'Предстоящие', exam_current: 'Текущие', exam_passed: 'Завершённые', exam_loading: 'Загрузка...', exam_next: 'Следующий:', exam_completed: 'Все экзамены завершены!',
+                time_d: 'Дней', time_h: 'Часов', time_m: 'Минут', time_s: 'Секунд'
+            },
+            tj: {
+                nav_schedule: 'Ҷадвал', nav_aud: 'Синфхонаҳо', nav_exams: 'Имтиҳонҳо', nav_more: 'Танзимот',
+                day_mon: 'Дш', day_tue: 'Сш', day_wed: 'Чш', day_thu: 'Пш', day_fri: 'Ҷм', day_sat: 'Шб',
+                aud: 'Ҳуҷра', type_lec: 'Лексия', type_prac: 'Амалия', teacher: 'Номаълум',
+                no_classes: 'Дарсҳо нестанд. Истироҳат кунед! 🎉',
+                all_faculties: 'Ҳамаи факултетҳо', stat_total: 'Ҳамагӣ', stat_free: 'Озод', aud_now: 'Ҳоло', aud_next: 'Оянда', empty_auds: 'Озод нест',
+                set_change_group: 'Ивази гурӯҳ', set_dark_mode: 'Реҷаи торик', set_color: 'Ранги асосӣ', set_lang: 'Забон',
+                modal_select_group: 'Интихоби ҷадвал', modal_faculty: 'Факултет', modal_course: 'Курс', modal_group: 'Гурӯҳ', btn_save: 'Захира', btn_done: 'Тайёр',
+                lang_ru: 'Русский', lang_tj: 'Тоҷикӣ', lang_en: 'English',
+                upd_avail: 'Навсозӣ мавҷуд аст', upd_btn: 'Навсозӣ кунед', upd_latest: 'Шумо версияи навтаринро доред', upd_success: 'Маълумот бо муваффақият нав карда шуд',
+                ai_desc: 'Мавзӯъро иваз кунед ё ягон савол диҳед.', ai_btn: 'Гӯш кардан',
+                exam_all: 'Ҳама', exam_upcoming: 'Оянда', exam_current: 'Ҷорӣ', exam_passed: 'Анҷомёфта', exam_loading: 'Боргирӣ...', exam_next: 'Оянда:', exam_completed: 'Ҳамаи имтиҳонҳо анҷом ёфтанд!',
+                time_d: 'Рӯз', time_h: 'Соат', time_m: 'Дақиқа', time_s: 'Сония'
+            },
+            en: {
+                nav_schedule: 'Schedule', nav_aud: 'Rooms', nav_exams: 'Exams', nav_more: 'Settings', 
+                day_mon: 'Mon', day_tue: 'Tue', day_wed: 'Wed', day_thu: 'Thu', day_fri: 'Fri', day_sat: 'Sat',
+                aud: 'Room', type_lec: 'Lecture', type_prac: 'Practice', teacher: 'Not specified',
+                no_classes: 'No classes. Enjoy! 🎉',
+                all_faculties: 'All Faculties', stat_total: 'Total', stat_free: 'Free', aud_now: 'Now', aud_next: 'Next', empty_auds: 'None free',
+                set_change_group: 'Change Group', set_dark_mode: 'Dark Mode', set_color: 'Accent Color', set_lang: 'Language',
+                modal_select_group: 'Select Schedule', modal_faculty: 'Faculty', modal_course: 'Course', modal_group: 'Group', btn_save: 'Save', btn_done: 'Done',
+                lang_ru: 'Русский', lang_tj: 'Тоҷикӣ', lang_en: 'English',
+                upd_avail: 'Update Available', upd_btn: 'Update Schedule', upd_latest: 'You have the latest version', upd_success: 'Data synced successfully',
+                ai_desc: 'Ask to change the theme, or ask any question.', ai_btn: 'Listen',
+                exam_all: 'All', exam_upcoming: 'Upcoming', exam_current: 'Current', exam_passed: 'Passed', exam_loading: 'Loading...', exam_next: 'Next:', exam_completed: 'All exams completed!',
+                time_d: 'Days', time_h: 'Hours', time_m: 'Mins', time_s: 'Secs'
+            }
+        };
+
+        const firebaseConfig = { apiKey: "AIzaSyB3_Qs3pr6OK2JvyL7ViO09aFXjjt9qygQ", authDomain: "tut-app-6aaae.firebaseapp.com", databaseURL: "https://tut-app-6aaae-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "tut-app-6aaae", storageBucket: "tut-app-6aaae.appspot.com", messagingSenderId: "726613480112", appId: "1:726613480112:web:6e55cfb767ec8f6c5d6175" };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        const App = {
+            state: {
+                tab: 'schedule',
+                lang: localStorage.getItem('appLang') || 'ru',
+                theme: localStorage.getItem('appTheme') || 'light',
+                accent: localStorage.getItem('appAccent') || 'blue',
+                data: { hierarchy: null, schedules: null },
+                path: JSON.parse(localStorage.getItem('schedulePath') || 'null'),
+                pathNames: localStorage.getItem('scheduleInfo') || '',
+                selectedDayIndex: new Date().getDay() === 0 ? 0 : new Date().getDay() - 1,
+                daysTJ: ['Душанбе', 'Сешанбе', 'Чоршанбе', 'Панҷшанбе', 'Ҷумъа', 'Шанбе'],
+                tempPath: { f: null, c: null, g: null }, tempPathNames: { f: '', c: '', g: '' },
+                currentListType: '', audFacultyFilter: 'all', examFilter: 'all',
+                recognition: null, isListening: false, examCountdownInterval: null,
+                hasUpdate: false, lastSyncTime: localStorage.getItem('lastSyncTime') || 'Никогда',
+                serverDataStr: null, localDataStr: localStorage.getItem('appDataHash') || null
+            },
+
+            init() {
+                this.applyTheme();
+                this.changeLanguage(this.state.lang);
+                this.setupNav();
+                this.updateDaysUI();
+                this.loadLocalData();
+                this.initSpeech();
+
+                // Умное обновление данных
+                db.ref('/').on('value', snap => {
+                    const serverData = snap.val();
+                    if(!serverData) return;
+                    this.state.serverDataStr = JSON.stringify({h: serverData.hierarchy, s: serverData.schedules});
+                    if(!this.state.localDataStr) {
+                        this.saveServerDataToLocal(serverData.hierarchy, serverData.schedules);
+                    } else if (this.state.serverDataStr !== this.state.localDataStr) {
+                        this.state.hasUpdate = true; this.renderUpdateBlock();
+                    } else {
+                        this.state.hasUpdate = false; this.renderUpdateBlock();
+                    }
+                });
+
+                if (!this.state.path) setTimeout(() => this.openGroupSettings(), 500);
+                else this.updateHeaderSubtitle();
+            },
+
+            // === ТЕМЫ И ЯЗЫК ===
+            applyTheme() {
+                const isDark = this.state.theme === 'dark';
+                document.documentElement.className = ''; 
+                if(isDark) document.documentElement.classList.add('theme-dark');
+                
+                const sw = document.getElementById('theme-switch');
+                if(sw) { if(isDark) sw.classList.add('on'); else sw.classList.remove('on'); }
+                document.getElementById('meta-theme-color').setAttribute('content', isDark ? '#000000' : '#F2F2F7');
+                document.documentElement.classList.add(`color-${this.state.accent}`);
+            },
+            toggleDarkMode(forceMode = null) {
+                if(forceMode) this.state.theme = forceMode;
+                else this.state.theme = this.state.theme === 'light' ? 'dark' : 'light';
+                localStorage.setItem('appTheme', this.state.theme);
+                this.applyTheme();
+            },
+            setAccent(color) {
+                this.state.accent = color;
+                localStorage.setItem('appAccent', color);
+                this.applyTheme();
+            },
+            changeLanguage(lang) {
+                this.state.lang = lang;
+                localStorage.setItem('appLang', lang);
+                document.getElementById('current-lang-text').textContent = i18n[lang][`lang_${lang}`];
+                this.translatePage();
+                this.renderSchedule(); this.renderUpdateBlock(); this.renderExams();
+            },
+            t(key) { return i18n[this.state.lang][key] || key; },
+            translatePage() { document.querySelectorAll('[data-i18n]').forEach(el => el.textContent = this.t(el.getAttribute('data-i18n'))); },
+
+            showToast(msg) {
+                const t = document.getElementById('app-toast');
+                t.textContent = msg; t.classList.add('show');
+                setTimeout(() => t.classList.remove('show'), 3000);
+            },
+
+            // === НАВИГАЦИЯ (АППАРАТНО УСКОРЕННАЯ) ===
+            switchTab(tabId) {
+                if (this.state.tab === tabId && tabId !== '') return;
+                this.state.tab = tabId;
+
+                const titles = { 'schedule': 'nav_schedule', 'free-aud': 'nav_aud', 'exams': 'nav_exams', 'settings': 'nav_more' };
+                document.getElementById('app-header-title').textContent = this.t(titles[tabId]);
+
+                document.querySelectorAll('.view-container').forEach(el => el.classList.remove('view-active'));
+                document.getElementById(`view-${tabId}`).classList.add('view-active');
+
+                document.querySelectorAll('.nav-item').forEach(btn => {
+                    const icon = btn.querySelector('i');
+                    if (btn.dataset.tab === tabId) { btn.classList.add('active'); icon.className = icon.className.replace('ph ', 'ph-fill '); } 
+                    else { btn.classList.remove('active'); icon.className = icon.className.replace('ph-fill ', 'ph '); }
+                });
+
+                if (tabId === 'schedule') this.renderSchedule();
+                if (tabId === 'free-aud') this.calculateFreeAuds();
+                if (tabId === 'settings') this.renderUpdateBlock();
+                if (tabId === 'exams') this.renderExams();
+            },
+            setupNav() { this.switchTab('schedule'); },
+            updateDaysUI() { document.querySelectorAll('.day-btn').forEach((btn, idx) => { btn.classList.toggle('active', idx === this.state.selectedDayIndex); }); },
+            selectDay(index) { this.state.selectedDayIndex = index; this.updateDaysUI(); this.renderSchedule(); },
+
+            // === ОБНОВЛЕНИЯ ДАННЫХ ===
+            loadLocalData() {
+                const h = localStorage.getItem('hier'), s = localStorage.getItem('sched');
+                if (h && s) { this.state.data.hierarchy = JSON.parse(h); this.state.data.schedules = JSON.parse(s); this.renderSchedule(); }
+            },
+            saveServerDataToLocal(hier, sched) {
+                this.state.data.hierarchy = hier; this.state.data.schedules = sched;
+                localStorage.setItem('hier', JSON.stringify(hier)); localStorage.setItem('sched', JSON.stringify(sched));
+                
+                this.state.localDataStr = this.state.serverDataStr;
+                localStorage.setItem('appDataHash', this.state.localDataStr);
+                
+                const now = new Date();
+                this.state.lastSyncTime = `${String(now.getDate()).padStart(2,'0')}.${String(now.getMonth()+1).padStart(2,'0')}.${now.getFullYear()}, ${now.toLocaleTimeString('ru-RU')}`;
+                localStorage.setItem('lastSyncTime', this.state.lastSyncTime);
+                
+                this.state.hasUpdate = false; this.renderUpdateBlock();
+                if (this.state.tab === 'schedule') this.renderSchedule();
+                if (this.state.tab === 'exams') this.renderExams();
+            },
+            renderUpdateBlock() {
+                const block = document.getElementById('update-block');
+                if(!block) return;
+                
+                if(this.state.hasUpdate) {
+                    block.className = "glass-card rounded-[24px] p-4 mb-4 flex items-center justify-between tap-active bg-blue-500/10 border-blue-500/20";
+                    block.onclick = () => App.applyUpdate();
+                    block.innerHTML = `
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-full bg-[var(--accent)] flex items-center justify-center text-white shadow-glow"><i class="ph-bold ph-cloud-arrow-down text-xl"></i></div>
+                            <div><span class="font-bold text-[16px] block text-[var(--accent)]">${this.t('upd_avail')}</span></div>
+                        </div>
+                        <button class="bg-[var(--accent)] text-white px-4 py-2 rounded-full font-bold text-sm shadow-glow">${this.t('upd_btn')}</button>
+                    `;
+                } else {
+                    block.className = "glass-card rounded-[24px] p-4 mb-4 flex items-center justify-between tap-active";
+                    block.onclick = () => App.forceUpdateCheck();
+                    block.innerHTML = `
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-full bg-[var(--text-mut)] bg-opacity-10 flex items-center justify-center text-[var(--text-main)]"><i id="sync-icon" class="ph-bold ph-check-circle text-xl"></i></div>
+                            <div>
+                                <span class="font-bold text-[15px] block">${this.t('upd_latest')}</span>
+                                <span class="text-[11px] font-medium text-[var(--text-mut)] mt-0.5 block">${this.state.lastSyncTime}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            },
+            applyUpdate() {
+                if(this.state.serverDataStr) { const data = JSON.parse(this.state.serverDataStr); this.saveServerDataToLocal(data.h, data.s); this.showToast(this.t('upd_success')); }
+            },
+            forceUpdateCheck() {
+                const icon = document.getElementById('sync-icon');
+                if(icon) { icon.classList.remove('ph-check-circle'); icon.classList.add('ph-arrows-clockwise', 'animate-spin'); }
+                db.ref('/').once('value', snap => {
+                    if(icon) { icon.classList.remove('ph-arrows-clockwise', 'animate-spin'); icon.classList.add('ph-check-circle'); }
+                    const serverData = snap.val();
+                    if(serverData) {
+                        this.state.serverDataStr = JSON.stringify({h: serverData.hierarchy, s: serverData.schedules});
+                        this.saveServerDataToLocal(serverData.hierarchy, serverData.schedules);
+                    }
+                    this.showToast(this.t('upd_success'));
+                });
+            },
+            updateHeaderSubtitle() {
+                const groupName = this.state.pathNames ? this.state.pathNames.split(', ')[2] : '';
+                document.getElementById('app-header-subtitle').textContent = groupName ? `Группа: ${groupName}` : '';
+                document.getElementById('settings-current-group').textContent = groupName || 'Не выбрана';
+            },
+
+            // === ВСПЛЫВАЮЩИЕ МЕНЮ (BOTTOM SHEETS) ===
+            closeAllModals() {
+                document.getElementById('modal-bg').classList.remove('active');
+                document.querySelectorAll('.bottom-sheet').forEach(el => el.classList.remove('active'));
+                if(this.state.isListening) this.toggleVoiceRecording();
+            },
+            openGroupSettings() {
+                document.getElementById('modal-bg').classList.add('active'); document.getElementById('groupSettingsSheet').classList.add('active');
+                if (this.state.path) { this.state.tempPath = {...this.state.path}; const parts = this.state.pathNames.split(', '); this.state.tempPathNames = { f: parts[0], c: parts[1], g: parts[2] }; } 
+                else { this.state.tempPath = { f: null, c: null, g: null }; this.state.tempPathNames = { f: '', c: '', g: '' }; }
+                this.updateGroupSheetUI();
+            },
+            updateGroupSheetUI() {
+                document.getElementById('lbl-faculty').textContent = this.state.tempPathNames.f || 'Не выбран';
+                document.getElementById('lbl-course').textContent = this.state.tempPathNames.c || 'Не выбран';
+                document.getElementById('lbl-group').textContent = this.state.tempPathNames.g || 'Не выбрана';
+                const bC = document.getElementById('btn-course'), bG = document.getElementById('btn-group'), bS = document.getElementById('btn-save-group');
+                if (this.state.tempPath.f) bC.classList.remove('opacity-50', 'pointer-events-none'); else bC.classList.add('opacity-50', 'pointer-events-none');
+                if (this.state.tempPath.c) bG.classList.remove('opacity-50', 'pointer-events-none'); else bG.classList.add('opacity-50', 'pointer-events-none');
+                if (this.state.tempPath.g) bS.classList.remove('opacity-50', 'pointer-events-none'); else bS.classList.add('opacity-50', 'pointer-events-none');
+            },
+            openListSheet(type) {
+                if (!this.state.data.hierarchy && type !== 'lang' && type !== 'aud-faculty') return;
+                this.state.currentListType = type; let title = '', items = [];
+                if (type === 'faculty') { title = this.t('modal_faculty'); for (let id in this.state.data.hierarchy) items.push({ id, name: this.state.data.hierarchy[id].name }); } 
+                else if (type === 'course') { title = this.t('modal_course'); const cData = this.state.data.hierarchy[this.state.tempPath.f].courses; for (let id in cData) items.push({ id, name: cData[id].name }); } 
+                else if (type === 'group') { title = this.t('modal_group'); const gData = this.state.data.hierarchy[this.state.tempPath.f].courses[this.state.tempPath.c].groups; for (let id in gData) items.push({ id, name: gData[id].name }); } 
+                else if (type === 'lang') { title = this.t('set_lang'); items = [ {id: 'ru', name: 'Русский'}, {id: 'tj', name: 'Тоҷикӣ'}, {id: 'en', name: 'English'} ]; } 
+                else if (type === 'aud-faculty') { title = this.t('modal_faculty'); items = [{ id: 'all', name: this.t('all_faculties') }]; for (let id in this.state.data.hierarchy) items.push({ id, name: this.state.data.hierarchy[id].name }); }
+                document.getElementById('list-sheet-title').textContent = title;
+                document.getElementById('list-sheet-content').innerHTML = items.map(item => {
+                    let isSel = false;
+                    if(type==='faculty') isSel = item.id===this.state.tempPath.f; else if(type==='course') isSel = item.id===this.state.tempPath.c; else if(type==='group') isSel = item.id===this.state.tempPath.g; else if(type==='lang') isSel = item.id===this.state.lang; else if(type==='aud-faculty') isSel = item.id===this.state.audFacultyFilter;
+                    return `<div class="list-row tap-active ${isSel?'selected':''}" onclick="App.selectListItem('${item.id}', '${item.name.replace(/'/g, "\\'")}')"><span>${item.name}</span>${isSel?'<i class="ph-bold ph-check text-xl"></i>':''}</div>`;
+                }).join('');
+                document.getElementById('listSheet').classList.add('active');
+            },
+            closeListSheet() { document.getElementById('listSheet').classList.remove('active'); },
+            selectListItem(id, name) {
+                const t = this.state.currentListType;
+                if (t==='faculty') { this.state.tempPath.f = id; this.state.tempPathNames.f = name; this.state.tempPath.c = null; this.state.tempPathNames.c = ''; this.state.tempPath.g = null; this.state.tempPathNames.g = ''; }
+                else if (t==='course') { this.state.tempPath.c = id; this.state.tempPathNames.c = name; this.state.tempPath.g = null; this.state.tempPathNames.g = ''; }
+                else if (t==='group') { this.state.tempPath.g = id; this.state.tempPathNames.g = name; }
+                else if (t==='lang') { this.changeLanguage(id); }
+                else if (t==='aud-faculty') { this.state.audFacultyFilter = id; document.getElementById('aud-faculty-label').textContent = name; this.calculateFreeAuds(); }
+                this.closeListSheet(); if (t!=='lang' && t!=='aud-faculty') this.updateGroupSheetUI();
+            },
+            saveGroupSelection() {
+                this.state.path = {...this.state.tempPath}; this.state.pathNames = `${this.state.tempPathNames.f}, ${this.state.tempPathNames.c}, ${this.state.tempPathNames.g}`;
+                localStorage.setItem('schedulePath', JSON.stringify(this.state.path)); localStorage.setItem('scheduleInfo', this.state.pathNames);
+                this.updateHeaderSubtitle(); this.closeAllModals(); this.switchTab('schedule');
+            },
+
+            // === РЕНДЕР ПАР (ОБНОВЛЕННЫЙ БЕЙДЖ ПРЕПОДАВАТЕЛЯ) ===
+            renderSchedule() {
+                const list = document.getElementById('schedule-list');
+                if (!this.state.data.schedules || !this.state.path) {
+                    list.innerHTML = `<div class="text-center p-8 text-[var(--text-mut)] mt-10"><i class="ph-duotone ph-student text-6xl mb-4"></i><p class="text-[15px]">Группа не выбрана.</p></div>`;
+                    return;
+                }
+                const dayKey = this.state.daysTJ[this.state.selectedDayIndex];
+                const schedule = this.state.data.schedules[this.state.path.f]?.[this.state.path.c]?.[this.state.path.g]?.[dayKey] || [];
+                const validLessons = schedule.filter(item => item.subject?.trim() && item.aud?.trim());
+
+                if (validLessons.length === 0) {
+                    list.innerHTML = `<div class="glass-card rounded-[24px] p-10 flex flex-col items-center justify-center text-center mt-6"><i class="ph-fill ph-check-circle text-[60px] text-green-500 mb-4"></i><h3 class="font-bold text-xl">${this.t('no_classes')}</h3></div>`;
+                    return;
+                }
+
+                list.innerHTML = validLessons.map(item => {
+                    const isLecture = item.subject.toLowerCase().includes('лекция') || item.subject.toLowerCase().includes('маъруза');
+                    const color = isLecture ? 'bg-purple-500' : 'bg-[var(--accent)]';
+                    
+                    let subjText = item.subject || '', teachText = item.teacher || '';
+                    if (!teachText && subjText.includes(',')) {
+                        const parts = subjText.split(','); subjText = parts[0].trim(); teachText = parts.slice(1).join(',').trim();
+                    }
+                    teachText = teachText || this.t('teacher');
+
+                    return `
+                    <div class="glass-card rounded-[20px] p-2.5 flex gap-3 relative overflow-hidden tap-active transition-spring">
+                        <div class="absolute left-0 top-0 bottom-0 w-[5px] ${color}"></div>
+                        <div class="flex flex-col items-center justify-center min-w-[65px] border-r border-[var(--border)] pr-2 pl-1.5">
+                            <span class="font-bold text-[22px] leading-none text-[var(--text-main)] tracking-tight">${item.startTime || ''}</span>
+                            <span class="text-[var(--text-mut)] text-[11px] font-bold mt-1.5">${item.endTime || ''}</span>
+                        </div>
+                        <div class="flex-1 py-0.5">
+                            <div class="flex justify-between items-start mb-1.5">
+                                <span class="text-[9px] font-extrabold uppercase tracking-widest text-[var(--text-mut)] mt-0.5 opacity-80">${isLecture ? this.t('type_lec') : this.t('type_prac')}</span>
+                            </div>
+                            <h3 class="font-bold text-[15px] leading-tight mb-2.5 text-[var(--text-main)] pr-1">${subjText}</h3>
+                            
+                            <!-- ДВА БЕЙДЖА РЯДОМ (АУДИТОРИЯ + ФИО) -->
+                            <div class="flex flex-wrap items-center gap-1.5 mt-2">
+                                <span class="bg-[var(--accent-soft)] text-[var(--accent)] text-[10px] font-extrabold px-2 py-1 rounded-md flex items-center gap-1 shadow-badge">
+                                    <i class="ph-bold ph-door-open text-[11px]"></i> ${item.aud}
+                                </span>
+                                <span class="bg-[var(--accent-soft)] text-[var(--accent)] text-[10px] font-extrabold px-2 py-1 rounded-md flex items-center gap-1 shadow-badge">
+                                    <i class="ph-bold ph-user-circle text-[11px]"></i> ${teachText}
+                                </span>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+            },
+
+            // === АУДИТОРИИ ===
+            calculateFreeAuds() {
+                if(!this.state.data.schedules) return;
+                const filterId = this.state.audFacultyFilter, now = new Date(), todayIndex = now.getDay() === 0 ? 6 : now.getDay() - 1;
+                const dayName = todayIndex < 6 ? this.state.daysTJ[todayIndex] : null;
+                const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                let allAuds = new Set(), occNow = new Set(), occNext = new Set(), allStartTimes = [];
+                const faculties = filterId === 'all' ? Object.keys(this.state.data.schedules) : [filterId];
+
+                faculties.forEach(fId => {
+                    if(!this.state.data.schedules[fId]) return;
+                    Object.values(this.state.data.schedules[fId]).forEach(c => Object.values(c).forEach(g => {
+                        if(dayName && g[dayName]) g[dayName].forEach(l => {
+                            if(l.aud?.trim()) allAuds.add(l.aud.trim());
+                            if(l.startTime && l.endTime) { allStartTimes.push(l.startTime); if (currentTime >= l.startTime && currentTime < l.endTime) occNow.add(l.aud.trim()); }
+                        });
+                    }));
+                });
+
+                const uniqueStarts = [...new Set(allStartTimes)].sort(), nextStartTime = uniqueStarts.find(t => t > currentTime);
+                if(nextStartTime) {
+                    faculties.forEach(fId => {
+                        if(!this.state.data.schedules[fId]) return;
+                        Object.values(this.state.data.schedules[fId]).forEach(c => Object.values(c).forEach(g => {
+                            if(dayName && g[dayName]) g[dayName].forEach(l => { if(l.startTime === nextStartTime && l.aud?.trim()) occNext.add(l.aud.trim()); });
+                        }));
+                    });
+                }
+
+                const allSorted = Array.from(allAuds).sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
+                const freeNow = allSorted.filter(a => !occNow.has(a)), freeNext = nextStartTime ? allSorted.filter(a => !occNext.has(a)) : [];
+
+                document.getElementById('stat-total').textContent = allAuds.size; document.getElementById('stat-free').textContent = freeNow.length;
+                const renderGrid = (list) => {
+                    if(list.length === 0) return `<div class="col-span-full text-center text-[var(--text-mut)] py-4 text-[13px]">${this.t('empty_auds')}</div>`;
+                    return list.map(a => `<div class="glass-card rounded-[14px] py-2 px-1 text-center font-bold text-[13px] text-[var(--text-main)]">${a}</div>`).join('');
+                };
+                document.getElementById('aud-list-now').innerHTML = renderGrid(freeNow); document.getElementById('aud-list-next').innerHTML = renderGrid(freeNext);
+            },
+
+            // === ЭКЗАМЕНЫ ===
+            setExamFilter(filter, btnElement) {
+                this.state.examFilter = filter;
+                document.querySelectorAll('.exam-filter').forEach(btn => {
+                    btn.className = "exam-filter glass-card px-4 py-1.5 rounded-full font-bold text-[13px] text-[var(--text-mut)] whitespace-nowrap tap-active transition-all";
+                });
+                btnElement.className = "exam-filter bg-[var(--accent)] text-white px-4 py-1.5 rounded-full font-bold text-[13px] whitespace-nowrap shadow-glow tap-active transition-all";
+                this.renderExams();
+            },
+            renderExams() {
+                if(this.state.examCountdownInterval) clearInterval(this.state.examCountdownInterval);
+                const list = document.getElementById('exams-list');
+                const examsObj = this.state.data.schedules?.[this.state.path?.f]?.[this.state.path?.c]?.[this.state.path?.g]?.exams;
+                let allExams = examsObj ? Object.keys(examsObj).map(k => ({ id: k, ...examsObj[k] })) : [];
+
+                if (allExams.length === 0) {
+                    list.innerHTML = `<div class="text-center p-8 text-[var(--text-mut)] mt-10"><i class="ph-duotone ph-exam text-6xl mb-4"></i><p class="text-[15px]">${this.t('no_classes')}</p></div>`;
+                    document.getElementById('exam-next-title').textContent = this.t('exam_completed');
+                    document.getElementById('exam-countdown').innerHTML = '';
+                    return;
+                }
+
+                allExams.sort((a,b) => new Date(`${a.date}T${a.start}`) - new Date(`${b.date}T${b.start}`));
+                const now = new Date();
+                
+                // Фильтрация
+                const filteredExams = allExams.filter(exam => {
+                    const start = new Date(`${exam.date}T${exam.start}`), end = new Date(`${exam.date}T${exam.end}`);
+                    const status = now > end ? 'passed' : (now >= start && now <= end ? 'current' : 'upcoming');
+                    return this.state.examFilter === 'all' || this.state.examFilter === status;
+                });
+
+                // Рендер Списка
+                list.innerHTML = filteredExams.map(exam => {
+                    const start = new Date(`${exam.date}T${exam.start}`), end = new Date(`${exam.date}T${exam.end}`);
+                    const isPassed = now > end, isCurrent = now >= start && now <= end;
+                    
+                    let statusColor = isPassed ? 'var(--text-mut)' : (isCurrent ? '#34C759' : 'var(--accent)');
+                    let statusBg = isPassed ? 'var(--border)' : (isCurrent ? 'rgba(52, 199, 89, 0.15)' : 'var(--accent-soft)');
+                    let statusText = isPassed ? this.t('exam_passed') : (isCurrent ? this.t('exam_current') : this.t('exam_upcoming'));
+                    
+                    const dateStr = new Date(exam.date).toLocaleDateString(this.state.lang === 'en' ? 'en-US' : 'ru-RU', { day: 'numeric', month: 'long' });
+
+                    return `
+                    <div class="glass-card rounded-[22px] p-4 flex flex-col gap-3 transition-spring tap-active ${isPassed ? 'opacity-60' : ''}">
+                        <div class="flex justify-between items-center border-b border-[var(--border)] pb-2">
+                            <span class="font-bold text-[15px] text-[var(--text-main)]">${dateStr}</span>
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase" style="background: ${statusBg}; color: ${statusColor};">${statusText}</span>
+                        </div>
+                        <h3 class="font-bold text-[18px] text-[var(--text-main)] leading-tight">${exam.subject}</h3>
+                        <div class="flex flex-wrap gap-2 mt-1">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-[var(--card-border)] bg-[var(--border)] text-[var(--text-main)] text-[11px] font-semibold"><i class="ph-bold ph-clock text-[14px] text-[var(--text-mut)]"></i> ${exam.start} - ${exam.end}</span>
+                            <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-[var(--card-border)] bg-[var(--border)] text-[var(--text-main)] text-[11px] font-semibold"><i class="ph-bold ph-door-open text-[14px] text-[var(--text-mut)]"></i> ${exam.room}</span>
+                        </div>
+                        <div class="inline-flex items-center gap-1.5 text-[var(--text-mut)] text-[12px] font-semibold mt-1"><i class="ph-fill ph-user-circle text-[16px]"></i> ${exam.teacher}</div>
+                    </div>`;
+                }).join('');
+
+                // Обратный отсчет
+                const nextExam = allExams.find(e => new Date(`${e.date}T${e.end}`) > now);
+                if (nextExam) {
+                    document.getElementById('exam-next-title').textContent = `${this.t('exam_next')} ${nextExam.subject}`;
+                    const targetTime = new Date(`${nextExam.date}T${nextExam.start}`).getTime();
+                    
+                    const updateTimer = () => {
+                        const dist = targetTime - new Date().getTime();
+                        if (dist < 0) { clearInterval(this.state.examCountdownInterval); document.getElementById('exam-countdown').innerHTML = `<span class="font-bold text-green-500">Экзамен начался!</span>`; return; }
+                        const d = Math.floor(dist/(1000*60*60*24)), h = Math.floor((dist%(1000*60*60*24))/(1000*60*60)), m = Math.floor((dist%(1000*60*60))/(1000*60)), s = Math.floor((dist%(1000*60))/1000);
+                        document.getElementById('exam-countdown').innerHTML = `
+                            <div class="bg-[var(--card-bg)] px-3 py-1.5 rounded-[12px] min-w-[50px]"><span class="block font-bold text-xl text-[var(--text-main)]">${String(d).padStart(2,'0')}</span><span class="text-[9px] uppercase font-bold text-[var(--text-mut)]">${this.t('time_d')}</span></div>
+                            <div class="bg-[var(--card-bg)] px-3 py-1.5 rounded-[12px] min-w-[50px]"><span class="block font-bold text-xl text-[var(--text-main)]">${String(h).padStart(2,'0')}</span><span class="text-[9px] uppercase font-bold text-[var(--text-mut)]">${this.t('time_h')}</span></div>
+                            <div class="bg-[var(--card-bg)] px-3 py-1.5 rounded-[12px] min-w-[50px]"><span class="block font-bold text-xl text-[var(--text-main)]">${String(m).padStart(2,'0')}</span><span class="text-[9px] uppercase font-bold text-[var(--text-mut)]">${this.t('time_m')}</span></div>
+                            <div class="bg-[var(--card-bg)] px-3 py-1.5 rounded-[12px] min-w-[50px]"><span class="block font-bold text-xl text-[var(--accent)]">${String(s).padStart(2,'0')}</span><span class="text-[9px] uppercase font-bold text-[var(--text-mut)]">${this.t('time_s')}</span></div>
+                        `;
+                    };
+                    updateTimer(); this.state.examCountdownInterval = setInterval(updateTimer, 1000);
+                } else {
+                    document.getElementById('exam-next-title').textContent = this.t('exam_completed');
+                    document.getElementById('exam-countdown').innerHTML = '';
+                }
+            },
+
+            // === ИИ АССИСТЕНТ (GEMINI API) ===
+            initSpeech() {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) return;
+                this.state.recognition = new SpeechRecognition();
+                this.state.recognition.lang = 'ru-RU';
+                this.state.recognition.onstart = () => {
+                    this.state.isListening = true;
+                    document.getElementById('ai-icon').style.display = 'none'; document.getElementById('ai-waves').style.display = 'flex';
+                    document.getElementById('ai-status-text').textContent = 'Слушаю вас...';
+                    const btn = document.getElementById('ai-action-btn'); btn.textContent = 'Остановить'; btn.classList.replace('bg-[var(--accent)]', 'bg-red-500'); btn.classList.replace('shadow-glow', 'shadow-none');
+                };
+                this.state.recognition.onresult = (e) => this.processAICommand(e.results[0][0].transcript);
+                this.state.recognition.onend = () => {
+                    this.state.isListening = false;
+                    document.getElementById('ai-icon').style.display = 'block'; document.getElementById('ai-waves').style.display = 'none';
+                    const btn = document.getElementById('ai-action-btn'); btn.textContent = this.t('ai_btn'); btn.classList.replace('bg-red-500', 'bg-[var(--accent)]'); btn.classList.add('shadow-glow');
+                };
+            },
+            openVoiceAssistant() { document.getElementById('modal-bg').classList.add('active'); document.getElementById('aiModal').classList.add('active'); document.getElementById('ai-status-text').textContent = 'Gemini AI'; document.getElementById('ai-response-text').textContent = this.t('ai_desc'); },
+            toggleVoiceRecording() { if(!this.state.recognition) { alert('Браузер не поддерживает голос.'); return; } if(this.state.isListening) this.state.recognition.stop(); else { document.getElementById('ai-response-text').textContent = '...'; this.state.recognition.start(); } },
+            
+            async processAICommand(text) {
+                document.getElementById('ai-status-text').textContent = `«${text}»`; const tLower = text.toLowerCase();
+                
+                // 1. Команды управления интерфейсом
+                if(tLower.includes('тёмн') || tLower.includes('темн')) { this.toggleDarkMode('dark'); this.speak("Включаю тёмную тему."); return; }
+                if(tLower.includes('светл')) { this.toggleDarkMode('light'); this.speak("Включаю светлую тему."); return; }
+                if(tLower.includes('красн')) { this.setAccent('red'); this.speak("Установил красный цвет."); return; }
+                if(tLower.includes('оранжев')) { this.setAccent('orange'); this.speak("Установил оранжевый цвет."); return; }
+                if(tLower.includes('зелен') || tLower.includes('зелён')) { this.setAccent('green'); this.speak("Установил зеленый цвет."); return; }
+                if(tLower.includes('синий') || tLower.includes('голубой')) { this.setAccent('blue'); this.speak("Установил синий цвет."); return; }
+                if(tLower.includes('настройк')) { this.switchTab('settings'); this.closeAllModals(); this.speak("Открываю настройки."); return; }
+                if(tLower.includes('групп')) { this.openGroupSettings(); this.speak("Открываю настройки группы."); return; }
+                if(tLower.includes('свободн') && tLower.includes('аудитор')) { this.switchTab('free-aud'); this.closeAllModals(); this.speak("Открываю свободные аудитории."); return; }
+                
+                // 2. Инфо о парах
+                if(tLower.includes('какая') && tLower.includes('пара')) {
+                     if(!this.state.path) { this.speak("Сначала выберите группу в настройках."); return; }
+                     const now = new Date(), todayIndex = now.getDay() === 0 ? 0 : now.getDay() - 1;
+                     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                     const schedule = this.state.data.schedules[this.state.path.f]?.[this.state.path.c]?.[this.state.path.g]?.[this.state.daysTJ[todayIndex]] || [];
+                     const current = schedule.find(l => timeStr >= l.startTime && timeStr < l.endTime);
+                     if(current) { this.speak(`Сейчас пара: ${current.subject.split(',')[0]}, аудитория ${current.aud}.`); return; }
+                     else { this.speak("В данный момент пар нет."); return; }
+                }
+
+                // 3. Нейросеть Google Gemini (Для любых других вопросов)
+                document.getElementById('ai-response-text').textContent = "Думаю...";
+                try {
+                    const apiKey = ""; 
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                    const res = await fetch(url, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: text }] }], systemInstruction: { parts: [{ text: "Ты умный ИИ-ассистент Gemini в студенческом приложении расписания. Отвечай кратко, дружелюбно и по делу." }] } })
+                    });
+                    const data = await res.json();
+                    if(data.candidates && data.candidates[0].content.parts[0].text) this.speak(data.candidates[0].content.parts[0].text);
+                    else this.speak("Извините, я не понял.");
+                } catch(e) { this.speak("Ошибка подключения к нейросети Gemini."); }
+            },
+            
+            speak(text) { document.getElementById('ai-response-text').textContent = text; try { const u = new SpeechSynthesisUtterance(text); u.lang = 'ru-RU'; speechSynthesis.speak(u); } catch(e){} }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => App.init());
+    </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then(registration => {
+                    console.log('Service Worker успешно зарегистрирован с scope:', registration.scope);
+                })
+                .catch(error => {
+                    console.log('Ошибка регистрации Service Worker:', error);
+                });
+        });
+    }
+  </script>
+</body>
+</html>
+
+
