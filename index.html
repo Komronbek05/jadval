@@ -8,20 +8,17 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon.png">
-  <link rel="icon" type="image/png" sizes="32x32" href="icon.png">
-<link rel="icon" type="image/png" sizes="16x16" href="icon.png">
-<link rel="shortcut icon" href="favicon.ico">
-    <!-- Tailwind CSS -->
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icon.png">
+    <link rel="shortcut icon" href="favicon.ico">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Phosphor Icons (Современные) -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
-    <!-- Google Fonts: Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
@@ -64,22 +61,23 @@
             --border: rgba(0,0,0,0.06);
             --bottom-nav-pb: env(safe-area-inset-bottom, 16px);
         }
-/* Убираем синий эффект при клике и блокируем выделение текста */
-* {
-    -webkit-tap-highlight-color: transparent !important;
-    -webkit-touch-callout: none; /* Запрет вызова меню в iOS */
-    -webkit-user-select: none;   /* Safari */
-    -moz-user-select: none;      /* Firefox */
-    -ms-user-select: none;       /* IE/Edge */
-    user-select: none;           /* Стандарт */
-    outline: none !important;
-}
+        
+        /* Убираем синий эффект при клике и блокируем выделение текста */
+        * {
+            -webkit-tap-highlight-color: transparent !important;
+            -webkit-touch-callout: none; /* Запрет вызова меню в iOS */
+            -webkit-user-select: none;   /* Safari */
+            -moz-user-select: none;      /* Firefox */
+            -ms-user-select: none;       /* IE/Edge */
+            user-select: none;           /* Стандарт */
+            outline: none !important;
+        }
 
-/* Оставляем возможность выделять текст в полях ввода (если они появятся в будущем) */
-input, textarea {
-    -webkit-user-select: auto;
-    user-select: auto;
-}
+        /* Оставляем возможность выделять текст в полях ввода (если они появятся в будущем) */
+        input, textarea {
+            -webkit-user-select: auto;
+            user-select: auto;
+        }
 
         .theme-dark {
             /* Темная тема */
@@ -133,28 +131,28 @@ input, textarea {
         /* === ЖИДКОЕ СТЕКЛО (Liquid Glass) === */
         .glass-card {
             background: var(--card-bg);
-            backdrop-filter: blur(25px) saturate(180%); -webkit-backdrop-filter: blur(25px) saturate(180%);
+            backdrop-filter: blur(10px) saturate(180%); -webkit-backdrop-filter: blur(15px) saturate(180%);
             border: 1px solid var(--card-border);
             box-shadow: 0 4px 15px rgba(0,0,0,0.03);
         }
 
         /* === НАВИГАЦИЯ ДНЕЙ === */
-        .days-wrapper { background-color: var(--bg-color); padding: 10px 0; margin-bottom: 5px; transition: background-color 0.4s ease; }
-        .days-container { background: var(--days-container-bg); border-radius: 40px; padding: 4px; display: flex; justify-content: space-between; align-items: center; }
+        .days-wrapper { background-color: transparent; padding: 10px 0; margin-bottom: 5px; transition: background-color 0.4s ease; }
+        .days-container { background: var(--nav-bg); backdrop-filter: blur(18px) saturate(200%); border-radius: 40px; padding: 4px; display: flex; justify-content: space-between; align-items: center; }
         .day-btn { position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: var(--days-text); font-weight: 600; font-size: 15px; border-radius: 50%; z-index: 2; }
-        .day-active-bg { position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 50%; background: var(--day-active-bg); box-shadow: var(--day-shadow); z-index: -1; opacity: 0; transform: scale(0.8); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .day-active-bg { position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 50%; background: var(--nav-bg); backdrop-filter: blur(18px) saturate(100%); box-shadow: var(--day-shadow); z-index: -1; opacity: 0; transform: scale(0.8); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .day-btn.active .day-active-bg { opacity: 1; transform: scale(1); }
         .day-btn.active { color: var(--day-active-text); text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
 
         /* === НИЖНЕЕ МЕНЮ === */
         .bottom-nav-wrapper {
             position: fixed; bottom: calc(15px + var(--bottom-nav-pb)); left: 50%; transform: translateX(-50%);
-            width: 95%; max-width: 450px;
-            background: var(--nav-bg); backdrop-filter: blur(35px) saturate(200%); -webkit-backdrop-filter: blur(35px) saturate(200%);
+            width: 93%; max-width: 450px;
+            background: var(--nav-bg); backdrop-filter: blur(8px) saturate(200%); -webkit-backdrop-filter: blur(15px) saturate(200%);
             border: 1px solid var(--card-border); border-radius: 40px; padding: 6px 10px;
             display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 35px rgba(0,0,0,0.15); z-index: 50;
         }
-        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 23%; padding: 8px 0; border-radius: 30px; color: var(--text-mut); transition: all 0.3s ease; opacity: 0.8; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 25%; padding: 8px 0; border-radius: 30px; color: var(--text-mut); transition: all 0.3s ease; opacity: 0.8; }
         .nav-item.active { background-color: var(--accent-soft); color: var(--accent); opacity: 1; }
         .nav-item i { font-size: 24px; margin-bottom: 2px; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .nav-item.active i { transform: scale(1.15); }
@@ -193,21 +191,16 @@ input, textarea {
 </head>
 <body class="antialiased selection:bg-[var(--accent)] selection:text-white">
 
-    <!-- Тост для уведомлений -->
     <div id="app-toast"></div>
 
-    <!-- Header -->
     <header class="fixed top-0 left-0 w-full z-40 px-4 flex flex-col justify-end h-[65px]" style="padding-top: env(safe-area-inset-top); background: var(--bg-color); transition: background-color 0.4s ease;">
         <h1 id="app-header-title" class="text-[28px] font-extrabold tracking-tight text-left leading-tight" data-i18n="nav_schedule">Расписание</h1>
         <p id="app-header-subtitle" class="text-[12px] font-semibold text-[var(--text-mut)] mt-[-2px] truncate"></p>
     </header>
 
-    <!-- Main Content -->
     <main id="app-content" class="relative w-full">
         
-        <!-- ================= TAB: SCHEDULE ================= -->
         <div id="view-schedule" class="view-container view-active px-3">
-            <!-- Навигация Дней (С липким фоном) -->
             <div class="days-wrapper sticky top-[65px] z-30">
                 <div class="days-container shadow-sm">
                     <button onclick="App.selectDay(0)" class="day-btn tap-active"><div class="day-active-bg"></div><span data-i18n="day_mon">Пн</span></button>
@@ -218,11 +211,9 @@ input, textarea {
                     <button onclick="App.selectDay(5)" class="day-btn tap-active"><div class="day-active-bg"></div><span data-i18n="day_sat">Сб</span></button>
                 </div>
             </div>
-            <!-- Список Пар -->
             <div id="schedule-list" class="flex flex-col gap-3 pb-2"></div>
         </div>
 
-        <!-- ================= TAB: FREE AUDITORIUMS ================= -->
         <div id="view-free-aud" class="view-container px-3 pt-[85px]">
             <div class="mb-5 glass-card rounded-[22px] p-4 flex justify-between items-center tap-active" onclick="App.openListSheet('aud-faculty')">
                 <div>
@@ -253,9 +244,7 @@ input, textarea {
             </div>
         </div>
 
-        <!-- ================= TAB: EXAMS ================= -->
         <div id="view-exams" class="view-container px-3 pt-[85px]">
-            <!-- Countdown Block -->
             <div class="glass-card rounded-[24px] p-5 mb-5 relative overflow-hidden bg-[var(--accent-soft)]" style="border-color: var(--accent-soft);">
                 <div class="absolute -right-4 -top-4 text-[var(--accent)] opacity-10"><i class="ph-fill ph-exam text-8xl"></i></div>
                 <div class="flex items-center gap-2 font-bold mb-3 text-[var(--accent)]">
@@ -263,11 +252,9 @@ input, textarea {
                     <span id="exam-next-title" data-i18n="exam_loading">Загрузка данных...</span>
                 </div>
                 <div id="exam-countdown" class="flex gap-3 justify-center text-center pt-3 border-t border-[var(--accent-soft)]">
-                    <!-- Timer dynamically inserted here -->
-                </div>
+                    </div>
             </div>
 
-            <!-- Filters -->
             <div class="flex gap-2 overflow-x-auto no-scrollbar mb-5 pb-1">
                 <button onclick="App.setExamFilter('all', this)" class="exam-filter bg-[var(--accent)] text-white px-4 py-1.5 rounded-full font-bold text-[13px] whitespace-nowrap shadow-glow tap-active transition-all" data-i18n="exam_all">Все</button>
                 <button onclick="App.setExamFilter('upcoming', this)" class="exam-filter glass-card px-4 py-1.5 rounded-full font-bold text-[13px] text-[var(--text-mut)] whitespace-nowrap tap-active transition-all" data-i18n="exam_upcoming">Предстоящие</button>
@@ -275,11 +262,9 @@ input, textarea {
                 <button onclick="App.setExamFilter('passed', this)" class="exam-filter glass-card px-4 py-1.5 rounded-full font-bold text-[13px] text-[var(--text-mut)] whitespace-nowrap tap-active transition-all" data-i18n="exam_passed">Завершённые</button>
             </div>
 
-            <!-- Exams Grid -->
             <div id="exams-list" class="flex flex-col gap-3 pb-4"></div>
         </div>
 
-        <!-- ================= TAB: SETTINGS ================= -->
         <div id="view-settings" class="view-container px-3 pt-[85px]">
             
             <div class="glass-card rounded-[24px] p-4 mb-4 flex items-center justify-between tap-active bg-[var(--accent-soft)]" style="border-color: var(--accent-soft);" onclick="App.openGroupSettings()">
@@ -295,11 +280,9 @@ input, textarea {
                 <div class="w-8 h-8 rounded-full bg-[var(--bg-color)] bg-opacity-50 flex items-center justify-center text-[var(--accent)]"><i class="ph-bold ph-caret-right text-lg"></i></div>
             </div>
 
-            <!-- Блок Обновлений -->
             <div id="update-block" class="glass-card rounded-[24px] mb-4 overflow-hidden transition-all"></div>
 
             <div class="glass-card rounded-[24px] overflow-hidden mb-6">
-                <!-- Тема -->
                 <div class="p-4 border-b border-[var(--border)] flex justify-between items-center tap-active" onclick="App.toggleDarkMode()">
                     <div class="flex items-center gap-3">
                         <div class="w-9 h-9 rounded-full bg-[var(--text-mut)] bg-opacity-10 flex items-center justify-center text-[var(--text-main)]"><i class="ph-fill ph-moon text-[20px]"></i></div>
@@ -308,7 +291,6 @@ input, textarea {
                     <div id="theme-switch" class="custom-switch"><div class="custom-switch-thumb"></div></div>
                 </div>
 
-                <!-- Цвета Акцента -->
                 <div class="p-4 border-b border-[var(--border)]">
                     <div class="flex items-center gap-3 mb-3">
                         <div class="w-9 h-9 rounded-full bg-pink-500/10 flex items-center justify-center text-pink-500"><i class="ph-fill ph-palette text-[20px]"></i></div>
@@ -323,7 +305,6 @@ input, textarea {
                     </div>
                 </div>
 
-                <!-- Язык -->
                 <div class="p-4 flex justify-between items-center tap-active" onclick="App.openListSheet('lang')">
                     <div class="flex items-center gap-3">
                         <div class="w-9 h-9 rounded-full bg-teal-500/10 flex items-center justify-center text-teal-500"><i class="ph-fill ph-translate text-[20px]"></i></div>
@@ -343,12 +324,10 @@ input, textarea {
         </div>
     </main>
 
-    <!-- ИИ Ассистент Button -->
     <div class="ai-fab tap-active" onclick="App.openVoiceAssistant()">
         <i class="ph-fill ph-sparkle text-[26px]"></i>
     </div>
 
-    <!-- === НИЖНЕЕ МЕНЮ === -->
     <nav class="bottom-nav-wrapper">
         <button onclick="App.switchTab('schedule')" class="nav-item active tap-active" data-tab="schedule">
             <i class="ph ph-calendar-dots"></i>
@@ -368,10 +347,8 @@ input, textarea {
         </button>
     </nav>
 
-    <!-- OVERLAYS & SHEETS -->
     <div id="modal-bg" class="bottom-sheet-bg" onclick="App.closeAllModals()"></div>
 
-    <!-- Настройка Группы -->
     <div id="groupSettingsSheet" class="bottom-sheet h-[75vh]">
         <div class="pt-4 pb-2 flex justify-center shrink-0"><div class="w-12 h-1.5 bg-[var(--border)] rounded-full"></div></div>
         <div class="px-5 pb-4 shrink-0 border-b border-[var(--border)] flex justify-between items-center">
@@ -408,7 +385,6 @@ input, textarea {
         </div>
     </div>
 
-    <!-- Универсальный список -->
     <div id="listSheet" class="bottom-sheet h-[65vh]">
         <div class="pt-4 pb-2 flex justify-center shrink-0"><div class="w-12 h-1.5 bg-[var(--border)] rounded-full"></div></div>
         <div class="px-5 pb-3 shrink-0 border-b border-[var(--border)] flex items-center gap-3">
@@ -418,7 +394,6 @@ input, textarea {
         <div class="bs-content pt-2" id="list-sheet-content"></div>
     </div>
 
-    <!-- ИИ Ассистент Gemini -->
     <div id="aiModal" class="bottom-sheet px-6 pt-4 pb-10 bg-gradient-to-b from-[var(--sheet-bg)] to-[var(--bg-color)]">
         <div class="w-12 h-1.5 bg-[var(--border)] rounded-full mx-auto mb-6"></div>
         <div class="flex flex-col items-center justify-center text-center">
@@ -503,46 +478,43 @@ input, textarea {
             },
 
             init() {
-            init() {
-    this.applyTheme();
-    this.changeLanguage(this.state.lang);
-    this.setupNav();
-    this.updateDaysUI();
-    this.loadLocalData();
-    this.initSpeech();
+                this.applyTheme();
+                this.changeLanguage(this.state.lang);
+                this.setupNav();
+                this.updateDaysUI();
+                this.loadLocalData();
+                this.initSpeech();
 
-    // Умное обновление данных
-    db.ref('/').on('value', snap => {
-        const serverData = snap.val();
-        if(!serverData) return;
-        this.state.serverDataStr = JSON.stringify({h: serverData.hierarchy, s: serverData.schedules});
-        
-        // ВАЖНО: Если данных в локальном стейте еще нет, применяем их сразу
-        if (!this.state.data.hierarchy) {
-            this.state.data.hierarchy = serverData.hierarchy;
-            this.state.data.schedules = serverData.schedules;
-            
-            // Открываем окно настройки группы ТОЛЬКО когда данные уже загружены
-            if (!this.state.path) {
-                this.openGroupSettings();
-            }
-        }
+                // Умное обновление данных
+                db.ref('/').on('value', snap => {
+                    const serverData = snap.val();
+                    if(!serverData) return;
+                    this.state.serverDataStr = JSON.stringify({h: serverData.hierarchy, s: serverData.schedules});
+                    
+                    // ВАЖНО: Если данных в локальном стейте еще нет, применяем их сразу
+                    if (!this.state.data.hierarchy) {
+                        this.state.data.hierarchy = serverData.hierarchy;
+                        this.state.data.schedules = serverData.schedules;
+                        
+                        // Открываем окно настройки группы ТОЛЬКО когда данные уже загружены
+                        if (!this.state.path) {
+                            this.openGroupSettings();
+                        }
+                    }
 
-        if(!this.state.localDataStr) {
-            this.saveServerDataToLocal(serverData.hierarchy, serverData.schedules);
-        } else if (this.state.serverDataStr !== this.state.localDataStr) {
-            this.state.hasUpdate = true; this.renderUpdateBlock();
-        } else {
-            this.state.hasUpdate = false; this.renderUpdateBlock();
-        }
-    });
+                    if(!this.state.localDataStr) {
+                        this.saveServerDataToLocal(serverData.hierarchy, serverData.schedules);
+                    } else if (this.state.serverDataStr !== this.state.localDataStr) {
+                        this.state.hasUpdate = true; this.renderUpdateBlock();
+                    } else {
+                        this.state.hasUpdate = false; this.renderUpdateBlock();
+                    }
+                });
 
-    // Убираем setTimeout, теперь логика открытия обрабатывается внутри коллбека Firebase
-    if (this.state.path) {
-        this.updateHeaderSubtitle();
-    }
-},
-
+                if (this.state.path) {
+                    this.updateHeaderSubtitle();
+                }
+            },
 
             // === ТЕМЫ И ЯЗЫК ===
             applyTheme() {
@@ -770,7 +742,6 @@ input, textarea {
                             </div>
                             <h3 class="font-bold text-[15px] leading-tight mb-2.5 text-[var(--text-main)] pr-1">${subjText}</h3>
                             
-                            <!-- ДВА БЕЙДЖА РЯДОМ (АУДИТОРИЯ + ФИО) -->
                             <div class="flex flex-wrap items-center gap-1.5 mt-2">
                                 <span class="bg-[var(--accent-soft)] text-[var(--accent)] text-[10px] font-extrabold px-2 py-1 rounded-md flex items-center gap-1 shadow-badge">
                                     <i class="ph-bold ph-door-open text-[11px]"></i> ${item.aud}
@@ -973,20 +944,18 @@ input, textarea {
 
         document.addEventListener('DOMContentLoaded', () => App.init());
     </script>
-  <script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js')
-                .then(registration => {
-                    console.log('Service Worker успешно зарегистрирован с scope:', registration.scope);
-                })
-                .catch(error => {
-                    console.log('Ошибка регистрации Service Worker:', error);
-                });
-        });
-    }
-  </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('Service Worker успешно зарегистрирован с scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('Ошибка регистрации Service Worker:', error);
+                    });
+            });
+        }
+    </script>
 </body>
 </html>
-
-
